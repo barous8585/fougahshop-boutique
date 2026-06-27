@@ -27,6 +27,7 @@ class ProductBase(BaseModel):
     prix_barre: Optional[float] = None
     stock: int = 0
     images: List[str] = []
+    video_url: Optional[str] = None
     category_id: Optional[int] = None
     en_vedette: bool = False
     tags: List[str] = []
