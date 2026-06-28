@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-SECRET_KEY = os.getenv("SECRET_KEY", "change-me-in-production")
+SECRET_KEY = os.getenv("SECRET_KEY") or os.getenv("JWT_SECRET", "change-me-in-production")
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_HOURS = 24
 bearer = HTTPBearer()
