@@ -15,7 +15,7 @@ GENIUSPAY_SECRET    = os.getenv("GENIUSPAY_SECRET_KEY", "")
 
 # Taux de conversion EUR → devises (doit rester cohérent avec le frontend)
 TAUX_EUR_FCFA = int(os.getenv("TAUX_EUR_FCFA", "700"))   # 1 EUR = 700 FCFA
-TAUX_EUR_GNF  = int(os.getenv("TAUX_EUR_GNF",  "9700"))  # 1 EUR = 9700 GNF
+TAUX_EUR_GNF  = int(os.getenv("TAUX_EUR_GNF",  "10800"))  # 1 EUR = 10800 GNF
 
 
 def fcfa_to_gnf(montant_fcfa: float) -> int:
