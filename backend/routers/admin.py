@@ -1,6 +1,6 @@
 import os, time
 from collections import defaultdict
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -13,8 +13,16 @@ from typing import Optional
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
+import logging as _log
 ADMIN_USER = os.getenv("ADMIN_USER", "admin")
-ADMIN_PASS = os.getenv("ADMIN_PASSWORD", "changeme123")
+ADMIN_PASS = os.getenv("ADMIN_PASSWORD", "")
+
+if not ADMIN_PASS:
+    ADMIN_PASS = "changeme123"
+    _log.getLogger(__name__).warning(
+        "ADMIN_PASSWORD non défini — utilisation du mot de passe par défaut. "
+        "Définissez ADMIN_PASSWORD dans Render > Environment."
+    )
 
 # ── Rate limiting login ───────────────────────────────────────────
 _attempts: dict = defaultdict(list)
@@ -32,10 +40,23 @@ def _check_rate(ip: str):
 def login(data: AdminLogin, request: Request):
     ip = request.client.host if request.client else "unknown"
     _check_rate(ip)
-    if data.username != ADMIN_USER or data.password != ADMIN_PASS:
-        raise HTTPException(401, "Identifiants incorrects")
+
+    # Comparaison en temps constant (protège contre timing attacks)
+    import hmac as _hmac
+    user_ok = _hmac.compare_digest(
+        data.username.strip().lower(),
+        ADMIN_USER.strip().lower()
+    )
+    pass_ok = _hmac.compare_digest(data.password, ADMIN_PASS)
+
+    if not (user_ok and pass_ok):
+        raise HTTPException(status_code=401, detail="Identifiants incorrects")
+
+    # Connexion réussie — réinitialiser le compteur pour cet IP
     _attempts[ip] = []
-    return {"access_token": create_token({"sub": data.username, "role": "admin"})}
+
+    token = create_token({"sub": data.username, "role": "admin"})
+    return {"access_token": token}
 
 # ── Stats ─────────────────────────────────────────────────────────
 @router.get("/stats", response_model=AdminStats)
