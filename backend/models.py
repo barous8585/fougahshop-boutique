@@ -32,9 +32,12 @@ class Product(Base):
     tags = Column(JSON, default=list)             # ["tag1", "tag2"]
     video_url = Column(String(500))
     actif = Column(Boolean, default=True)
+    note_moyenne = Column(Float, default=0.0)     # recalculee a chaque avis
+    nb_avis = Column(Integer, default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     category = relationship("Category", back_populates="products")
     order_items = relationship("OrderItem", back_populates="product")
+    reviews = relationship("Review", back_populates="product")
 
 class Order(Base):
     __tablename__ = "orders"
@@ -53,6 +56,9 @@ class Order(Base):
     total_fcfa = Column(Float, nullable=False)
     total_devise = Column(Float)
     devise = Column(String(10), default="FCFA")
+    # Promo
+    promo_code = Column(String(30))
+    reduction_fcfa = Column(Float, default=0.0)
     # État
     statut = Column(String(30), default="en_attente")
     # en_attente | payée | en_preparation | expédiée | livrée | annulée
@@ -92,3 +98,29 @@ class Setting(Base):
     id    = Column(Integer, primary_key=True, index=True)
     key   = Column(String(100), unique=True, index=True, nullable=False)
     value = Column(Text)
+
+class Review(Base):
+    __tablename__ = "reviews"
+    id = Column(Integer, primary_key=True, index=True)
+    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    order_id = Column(Integer, ForeignKey("orders.id"), nullable=False)
+    order_ref = Column(String(30))             # denormalise, pratique pour les requetes
+    client_nom = Column(String(100), nullable=False)
+    note = Column(Integer, nullable=False)      # 1 a 5
+    commentaire = Column(Text)
+    photos = Column(JSON, default=list)         # ["url1", "url2", ...]
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    product = relationship("Product", back_populates="reviews")
+
+
+class PromoCode(Base):
+    __tablename__ = "promo_codes"
+    id = Column(Integer, primary_key=True, index=True)
+    code = Column(String(30), unique=True, index=True, nullable=False)
+    type = Column(String(10), default="percent")   # percent | fixed
+    valeur = Column(Float, nullable=False)          # % si percent, FCFA si fixed
+    actif = Column(Boolean, default=True)
+    date_expiration = Column(DateTime(timezone=True), nullable=True)
+    usage_max = Column(Integer, nullable=True)       # null = illimite
+    usage_count = Column(Integer, default=0)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
