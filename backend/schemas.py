@@ -39,6 +39,8 @@ class ProductOut(ProductBase):
     id: int
     slug: str
     category: Optional[CategoryOut] = None
+    note_moyenne: float = 0.0
+    nb_avis: int = 0
     created_at: datetime
     class Config: from_attributes = True
 
@@ -63,6 +65,7 @@ class OrderCreate(BaseModel):
     ville: Optional[str] = None
     adresse: Optional[str] = None
     devise: str = "FCFA"
+    promo_code: Optional[str] = None
     items: List[OrderItemIn]
 
 class OrderItemOut(BaseModel):
@@ -84,6 +87,8 @@ class OrderOut(BaseModel):
     total_devise: Optional[float]
     devise: str
     statut: str
+    promo_code: Optional[str] = None
+    reduction_fcfa: float = 0.0
     items: List[OrderItemOut]
     created_at: datetime
     class Config: from_attributes = True
@@ -119,3 +124,67 @@ class AdminStats(BaseModel):
     chiffre_affaires: float
     produits_actifs: int
     commandes_en_attente: int
+
+# ── Reviews ─────────────────────────────────────────────────────
+class ReviewCreate(BaseModel):
+    product_id: int
+    order_ref: str
+    client_nom: str
+    note: int
+    commentaire: Optional[str] = None
+    photos: List[str] = []
+
+class ReviewOut(BaseModel):
+    id: int
+    product_id: int
+    client_nom: str
+    note: int
+    commentaire: Optional[str]
+    photos: List[str]
+    created_at: datetime
+    class Config: from_attributes = True
+
+class ReviewableItem(BaseModel):
+    product_id: int
+    nom: str
+    image: Optional[str] = None
+    deja_avis: bool = False
+
+class ReviewableCheck(BaseModel):
+    order_ref: str
+    statut: str
+    items: List[ReviewableItem]
+
+# ── Promo codes ───────────────────────────────────────────────────
+class PromoCodeCreate(BaseModel):
+    code: str
+    type: str = "percent"
+    valeur: float
+    actif: bool = True
+    date_expiration: Optional[datetime] = None
+    usage_max: Optional[int] = None
+
+class PromoCodeOut(BaseModel):
+    id: int
+    code: str
+    type: str
+    valeur: float
+    actif: bool
+    date_expiration: Optional[datetime]
+    usage_max: Optional[int]
+    usage_count: int
+    created_at: datetime
+    class Config: from_attributes = True
+
+class PromoValidateRequest(BaseModel):
+    code: str
+    total_fcfa: float
+
+class PromoValidateResponse(BaseModel):
+    valid: bool
+    message: str
+    code: Optional[str] = None
+    type: Optional[str] = None
+    valeur: Optional[float] = None
+    reduction_fcfa: float = 0.0
+    nouveau_total_fcfa: Optional[float] = None
