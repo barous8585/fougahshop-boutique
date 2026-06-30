@@ -93,3 +93,47 @@ async def upload_file(
         raise HTTPException(400, f"Cloudinary : {msg}")
     else:
         raise HTTPException(502, f"Réponse Cloudinary inattendue : {data}")
+
+@router.post("/review-photo")
+async def upload_review_photo(file: UploadFile = File(...)):
+    """
+    Upload PUBLIC reserve aux photos d'avis client (pas d'auth admin requise).
+    Restrictions plus strictes : images uniquement, 5 Mo max.
+    """
+    content = await file.read()
+
+    if not content:
+        raise HTTPException(400, "Fichier vide recu")
+
+    if len(content) > 5 * 1024 * 1024:
+        raise HTTPException(400, "Photo trop lourde (max 5 Mo)")
+
+    content_type = file.content_type or ""
+    if not (content_type in IMAGE_TYPES or content_type.startswith("image/")):
+        raise HTTPException(400, "Seules les images sont acceptees pour un avis")
+
+    cloudinary_url = f"https://api.cloudinary.com/v1_1/{CLOUD_NAME}/image/upload"
+
+    try:
+        resp = requests.post(
+            cloudinary_url,
+            data={"upload_preset": CLOUD_PRESET, "folder": "avis_clients"},
+            files={"file": (file.filename, content, content_type or "application/octet-stream")},
+            timeout=60,
+        )
+    except requests.exceptions.Timeout:
+        raise HTTPException(504, "Timeout upload photo")
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(503, f"Connexion impossible : {str(e)}")
+
+    try:
+        data = resp.json()
+    except Exception:
+        raise HTTPException(502, "Reponse invalide de Cloudinary")
+
+    if "secure_url" in data:
+        return {"url": data["secure_url"]}
+    elif "error" in data:
+        raise HTTPException(400, f"Cloudinary : {data['error'].get('message', 'erreur inconnue')}")
+    else:
+        raise HTTPException(502, "Reponse Cloudinary inattendue")
