@@ -2,7 +2,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .database import Base, engine
-from .routers import categories, products, orders, payments, admin, upload
+from .routers import categories, products, orders, payments, admin, upload, reviews, promos
 
 Base.metadata.create_all(bind=engine)
 
@@ -27,6 +27,8 @@ app.include_router(orders.router, prefix="/api")
 app.include_router(payments.router, prefix="/api")
 app.include_router(admin.router, prefix="/api")
 app.include_router(upload.router, prefix="/api")
+app.include_router(reviews.router, prefix="/api")
+app.include_router(promos.router, prefix="/api")
 
 @app.get("/")
 def root():
