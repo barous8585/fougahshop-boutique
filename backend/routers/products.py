@@ -43,6 +43,7 @@ def list_products(
     category: Optional[str] = None,
     search:   Optional[str] = None,
     vedette:  Optional[bool] = None,
+    sort:     Optional[str] = None,   # "desc" (defaut), "price_asc", "price_desc"
     page:     int = Query(1, ge=1),
     per_page: int = Query(12, ge=1, le=50),
     db: Session = Depends(get_db)
@@ -56,9 +57,17 @@ def list_products(
         q = q.filter(Product.nom.ilike(f"%{search}%"))
     if vedette is not None:
         q = q.filter(Product.en_vedette == vedette)
+
     total = q.count()
-    items = (q.order_by(Product.id.desc())
-              .offset((page - 1) * per_page)
+
+    if sort == "price_asc":
+        q = q.order_by(Product.prix.asc())
+    elif sort == "price_desc":
+        q = q.order_by(Product.prix.desc())
+    else:
+        q = q.order_by(Product.id.desc())
+
+    items = (q.offset((page - 1) * per_page)
               .limit(per_page)
               .all())
     return {
