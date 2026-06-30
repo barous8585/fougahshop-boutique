@@ -1,9 +1,9 @@
 import random, string
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from ..database import get_db
-from ..models import Order, OrderItem, Product
+from ..models import Order, OrderItem, Product, PromoCode
 from ..schemas import OrderCreate, OrderOut, OrderStatusUpdate
 from ..auth import get_admin
 from typing import List
@@ -30,11 +30,34 @@ def create_order(data: OrderCreate, db: Session = Depends(get_db)):
         total_fcfa += p.prix * item_in.quantite
         items_data.append((p, item_in.quantite))
 
-    # Conversion devise
-    total_devise = total_fcfa
+    # ── Code promo (optionnel) ──────────────────────────────────
+    reduction_fcfa = 0.0
+    promo_applied = None
+    promo_obj = None
+    if data.promo_code:
+        code_clean = data.promo_code.strip().upper()
+        promo_obj = db.query(PromoCode).filter(
+            PromoCode.code == code_clean,
+            PromoCode.actif == True
+        ).first()
+        if promo_obj:
+            now = datetime.now(timezone.utc)
+            expired = promo_obj.date_expiration and promo_obj.date_expiration < now
+            exhausted = promo_obj.usage_max is not None and promo_obj.usage_count >= promo_obj.usage_max
+            if not expired and not exhausted:
+                if promo_obj.type == "percent":
+                    reduction_fcfa = round(total_fcfa * (promo_obj.valeur / 100), 2)
+                else:
+                    reduction_fcfa = min(promo_obj.valeur, total_fcfa)
+                promo_applied = promo_obj.code
+
+    total_fcfa_final = max(0.0, total_fcfa - reduction_fcfa)
+
+    # Conversion devise (sur le total APRES reduction)
+    total_devise = total_fcfa_final
     devise = data.devise
     if data.pays_code == "GN":
-        total_devise = total_fcfa * TAUX_GNF
+        total_devise = total_fcfa_final * TAUX_GNF
         devise = "GNF"
     else:
         devise = "FCFA"
@@ -47,9 +70,14 @@ def create_order(data: OrderCreate, db: Session = Depends(get_db)):
         client_email=data.client_email,
         pays=data.pays, pays_code=data.pays_code,
         ville=data.ville, adresse=data.adresse,
-        total_fcfa=total_fcfa, total_devise=total_devise, devise=devise
+        total_fcfa=total_fcfa_final, total_devise=total_devise, devise=devise,
+        promo_code=promo_applied, reduction_fcfa=reduction_fcfa
     )
     db.add(order); db.flush()
+
+    # Incrementer l'usage du code promo seulement si la commande est creee avec succes
+    if promo_obj and promo_applied:
+        promo_obj.usage_count += 1
 
     # Créer les lignes + décrémenter stock
     for p, qty in items_data:
