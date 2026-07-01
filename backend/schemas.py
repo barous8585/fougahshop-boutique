@@ -31,6 +31,7 @@ class ProductBase(BaseModel):
     category_id: Optional[int] = None
     en_vedette: bool = False
     tags: List[str] = []
+    variants: List[dict] = []  # [{id, label, type, required, values}]
     actif: bool = True
 
 class ProductCreate(ProductBase): pass
@@ -55,6 +56,7 @@ class ProductList(BaseModel):
 class OrderItemIn(BaseModel):
     product_id: int
     quantite: int = 1
+    variante: dict = {}   # {taille: 'M', couleur: 'Noir', ...}
 
 class OrderCreate(BaseModel):
     client_nom: str
@@ -74,6 +76,7 @@ class OrderItemOut(BaseModel):
     image_snapshot: Optional[str]
     prix_unitaire: float
     quantite: int
+    variante: dict = {}
     class Config: from_attributes = True
 
 class OrderOut(BaseModel):
