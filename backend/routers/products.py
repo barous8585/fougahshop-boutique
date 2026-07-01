@@ -44,6 +44,8 @@ def list_products(
     search:   Optional[str] = None,
     vedette:  Optional[bool] = None,
     sort:     Optional[str] = None,   # "desc" (defaut), "price_asc", "price_desc"
+    prix_min: Optional[float] = None, # en FCFA
+    prix_max: Optional[float] = None, # en FCFA
     page:     int = Query(1, ge=1),
     per_page: int = Query(12, ge=1, le=50),
     db: Session = Depends(get_db)
@@ -57,6 +59,10 @@ def list_products(
         q = q.filter(Product.nom.ilike(f"%{search}%"))
     if vedette is not None:
         q = q.filter(Product.en_vedette == vedette)
+    if prix_min is not None:
+        q = q.filter(Product.prix >= prix_min)
+    if prix_max is not None:
+        q = q.filter(Product.prix <= prix_max)
 
     total = q.count()
 
