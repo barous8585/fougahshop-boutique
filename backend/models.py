@@ -77,6 +77,7 @@ class OrderItem(Base):
     image_snapshot = Column(String(500))
     prix_unitaire = Column(Float)
     quantite = Column(Integer, default=1)
+    variante = Column(JSON, default=dict)   # {taille: 'M', couleur: 'Noir', ...}
     order = relationship("Order", back_populates="items")
     product = relationship("Product", back_populates="order_items")
 
