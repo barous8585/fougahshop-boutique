@@ -85,7 +85,8 @@ def create_order(data: OrderCreate, db: Session = Depends(get_db)):
             order_id=order.id, product_id=p.id,
             nom_snapshot=p.nom,
             image_snapshot=p.images[0] if p.images else None,
-            prix_unitaire=p.prix, quantite=qty
+            prix_unitaire=p.prix, quantite=qty,
+            variante=it.variante if hasattr(it,'variante') and it.variante else {}
         )
         db.add(item)
         p.stock -= qty
